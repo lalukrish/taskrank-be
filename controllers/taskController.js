@@ -4,15 +4,22 @@ const prisma = new PrismaClient();
 const taskController = {
   getAllTasks: async (req, res) => {
     try {
-      const userId = req.user.id;
+      const { userId } = req.params;
+      const userIdInt = parseInt(userId, 10);
+
+      if (isNaN(userIdInt)) {
+        return res.status(400).json({ message: "Invalid userId" });
+      }
+
       const [tasks, count] = await Promise.all([
         prisma.task.findMany({
-          where: { userId },
+          where: { userId: userIdInt },
         }),
         prisma.task.count({
-          where: { userId },
+          where: { userId: userIdInt },
         }),
       ]);
+
       res.status(200).json({ tasks, count });
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -20,17 +27,24 @@ const taskController = {
     }
   },
   createTas: async (req, res) => {
-    const { title, description, rank } = req.body;
+    const { title, description, rank, userId } = req.body;
+
+    const userIdInt = parseInt(userId, 10);
+
+    if (isNaN(userIdInt)) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
+
     try {
-      const userId = req.user.id;
       const newTask = await prisma.task.create({
         data: {
           title,
           description,
           rank,
-          userId,
+          userId: userIdInt,
         },
       });
+
       res
         .status(201)
         .json({ message: "Task created successfully", task: newTask });
@@ -39,7 +53,6 @@ const taskController = {
       res.status(500).json({ message: "Internal server error" });
     }
   },
-
   updateTask: async (req, res) => {
     const { id } = req.params;
     const { title, description, rank } = req.body;
